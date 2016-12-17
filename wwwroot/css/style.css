@@ -1,0 +1,80 @@
+@font-face{font-family:BebasRegular;src:url(fonts/BEBAS___-webfont.eot?#iefix) format(embedded-opentype), url(fonts/BEBAS___-webfont.woff) format(woff), url(fonts/BEBAS___-webfont.ttf) format(truetype), url(fonts/BEBAS___-webfont.svg#BebasRegular) format(svg);font-weight:400;font-style:normal}
+.strong{display:inline;font-weight:700}
+.whites{color:#FFF}
+.id_result{padding-bottom:14px;text-align:left}
+.letters{display:block;margin-top:15px;margin-bottom:15px;word-spacing:3px;font-size:11px;font-weight:700;font-family:"Courier New", Courier, monospace}
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,.post,aside,canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,ruby,section,summary,time,mark,audio,video{border:0;font-size:100%;font:inherit;vertical-align:baseline;margin:0;padding:0}
+#target{width:500px;border-radius:10px;border:1px solid #000;text-align:center;margin:3px auto;padding:20px}
+#target_mobile{width:100%;border-radius:10px;border:1px solid #000;text-align:center;margin:3px auto;padding:20px}
+#head{border-bottom:1px solid #E5ECFA;width:50%;height:20px;float:left;padding-top:2px;margin-bottom:10px;background:#e7eeff;color:#00F;border-color:#000;border-style:solid}
+#head2{float:right;padding-top:1px;color:#00F;border-color:#000;border-style:solid}
+.box{width:200px;height:300px;border:1px solid green;line-height:300px}
+#target_search{width:665px;border-radius:10px;border:1px solid #000;text-align:center;margin:100px auto;padding:20px}
+.aligner{height:100%;width:0;display:inline-block;vertical-align:middle}
+.align{display:inline-block;vertical-align:middle}
+body{font-family:Arial, Helvetica, sans-serif;line-height:1}
+ol,ul{list-style:none;list-style-type:none;margin:0;padding:0}
+blockquote,q{quotes:none}
+blockquote:before,blockquote:after,q:before,q:after{content:none}
+table{border-collapse:collapse;border-spacing:0}
+a{text-decoration:none}
+h1{font-size:18px;line-height: 150%;}
+h2{font-size:16px;line-height: 150%;}
+h3{font-size:15px;line-height: 150%;}
+h4{font-size:14px;line-height: 150%;}
+h5{font-size:13px;line-height: 150%;}
+h6{font-size:12px;line-height: 150%;}
+.border-radius,.search input[type=text],.menu-show img,.menu-hide img{-moz-border-radius:2em;-webkit-border-radius:2em;border-radius:2em}
+.float-left,.menu-show,.menu-hide{float:left}
+.pos-relative,.search{position:relative}
+.header{background:#1d1d1d;padding:10px 0}
+.top-bar{position:relative;background:#2d2d2d;border-bottom:1px solid #3d3d3d;border-top:1px solid #3d3d3d;padding:10px 0 0}
+.menu-show,.menu-hide{display:none;border:none;color:#aaa;cursor:pointer;background:none}
+.menu-show img,.menu-hide img{background:#fff;padding:5px 15px}
+.menu{border-top:1px solid #000;display:block;font-size:14px;margin:10px 0 0}
+.menu ul{margin:0;padding:0}
+.menu li:nth-child(1) a{border-top:none}
+.menu a{display:block;text-align:center;border-top:1px solid #3d3d3d;border-bottom:1px solid #000;color:#5d5d5d;background:#1d1d1d;text-shadow:0 0 5px #000;outline:none;padding:20px}
+.menu a:hover{color:#777}
+.search{float:right;margin:0 5px 10px 0}
+.search input[type=text]{border:1px solid #3d3d3d;width:120px;color:#aaa;padding:5px 25px 5px 10px}
+.search input[type=submit]{position:absolute;right:3px;top:4px;background:url(images/search-but.png) no-repeat;width:20px;height:20px;border:none;cursor:pointer}
+.search input[type=text],.search input[type=submit]{outline:none}
+.logo{background:#FFF url(images/header.png);display:block}
+.logo a{display:block;text-align:center;padding:20px}
+.title h2{border-top:1px solid #3d3d3d;background:#1d1d1d;font-size:12px;color:#3d3d3d;padding:10px 20px}
+.post{font-family:Arial, Helvetica, sans-serif;font-size:12px;color:#3d3d3d;border-bottom:1px solid #eee;padding:20px}
+.post-info{line-height:1.3em;font-size:10px;color:#7d7d7d}
+.post-info span{color:#ddd}
+.post h1,.post h2,.post h3,.post h4,.post h5,.post h6{font-family:BebasRegular, Arial, sans-serif;font-weight:400;line-height:1.3em;word-spacing:.2em;background:none;padding:0 0 10px}
+.post h1{font-size:2.6em}
+.post h2{font-size:2em}
+.post h3{font-size:1.6em}
+.post h4{font-size:1.2em}
+.post figure,.post dd,.post dt,.post pre,.post p{padding:0 0 10px}
+.post p,.post ol,.post ul,.post dd,.post figcaption,.column{line-height:1.8em}
+.post ol,ul{margin:0 0 0 30px;padding:10px}
+.post ol{list-style:decimal}
+.post ul{list-style:disc}
+.post code{font-family:"Courier New", Courier, monospace;font-size:12px;line-height:1.8em}
+.post blockquote{display:block;border-left:1px dotted #7d7d7d;margin:0 0 10px}
+.post blockquote p{padding:5px 10px}
+.post blockquote p:first-letter{float:left;font-family:Georgia, "Times New Roman", Times, serif;font-size:14px;padding:10px 10px 0 0}
+.post em,.post i{font-style:italic}
+.post a:hover{color:#5d5d5d}
+.post dd{margin:0 0 0 20px}
+.post figure{text-align:center}
+.post figcaption{font-size:12px;color:#8d8d8d}
+.footer{background:#2d2d2d;text-align:center;font-size:12px;color:#7d7d7d;line-height:1.8em;padding:10px 0 0}
+.bot-bar{font-size:10px;font-family:Verdana, Arial, Helvetica, sans-serif;position:relative;background:#1d1d1d;border-top:1px solid #3d3d3d;color:#aaa;padding:10px}
+.license{display:inline-block;text-align:center;opacity:.3;padding:10px 0}
+.license:hover{opacity:1}
+#description{margin-top:25px;color:#000;font-size:13px}
+#description h2{font-size:13px;color:#000;text-align:left;background:#e7eeff;border-top:solid 1px #5573D3;padding:3px 5px}
+#description h3{font-size:12px;color:#000;text-align:left;background:#e7eeff;padding:3px 5px}
+#description p{text-align:justify;padding:0 5px}
+.clear,.clear-both{clear:both}
+.post,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section,.post h1 a,.post h2 a,.post h3 a,.post h4 a,.post h5 a,.post h6 a{display:block}
+img,.post figure img{max-width:100%}
+.post b,strong,.post dt{font-weight:700}
+.post a,.footer a{color:#009cff}

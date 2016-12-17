@@ -1,0 +1,395 @@
+ <?php
+
+/*
+header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
+header("Cache-Control: no-cache");
+header("Pragma: no-cache");
+//include ("/home/www/lib/security/iosec.php");  //Include module
+*/
+//later: geo ip und spracheinstellungen
+//error_reporting(E_ALL);
+//ini_set('display_errors', '1');
+
+require_once( "lib/template.inc.php" ); // $function->secureString(
+require_once( "lib/config.inc.php" );
+require_once( "lib/SSDTube.php" ); 
+require_once( "lib/functions.inc.php");
+require_once( "lib/connection.inc.php");
+require_once( "lib/search.inc.php");
+require_once( "lib/mobile/Mobile_Detect.php");
+require_once( "lib/geoip.inc.php");
+
+$detect 	= new Mobile_Detect;
+$function 	= new Functions();
+$config 	= new Config();
+$geoip	 	= new GeoIPClass();
+$search 	= new Search();
+$design 	= new Template();
+$objSSDTube = new SSDTube();
+$conn 		= new Connection();
+$conn->db( $config->sql_dbname() );
+$table 		= $config->sql_tablename();
+
+$deviceTypeMobile 	= $detect->isMobile();
+$deviceTypeTablet 	= $detect->isTablet();
+$countryCode		= $geoip->getCountryCode();	 
+
+if ($deviceTypeMobile === TRUE && $deviceTypeTablet === FALSE && preg_match('/(DE|CH|AT|LI)/i',$countryCode)){
+	header("HTTP/1.1 301 Moved Permanently");
+	// Weiterleitungsziel. Wohin soll eine permanente Weiterleitung erfolgen?
+	header("Location: http://www.youtube-mp3.mobi/m/");
+	// we have a mobile device
+	exit(0);
+} else if ($deviceTypeMobile === TRUE && $deviceTypeTablet === FALSE){
+	header("HTTP/1.1 301 Moved Permanently");
+	// Weiterleitungsziel. Wohin soll eine permanente Weiterleitung erfolgen?
+	header("Location: http://www.youtube-mp3.mobi/m/en/");
+	// we have a mobile device
+	exit(0);
+}
+
+$cache_uri 	= $_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+$video 		= urldecode($_REQUEST['video']);
+
+if (!empty($video)) {
+
+	/*
+		Check here for already existing converted videos
+		BEGIN: START 
+	*/
+	$video 		= urldecode($_REQUEST['video']);
+	
+	if (strstr($video, '&')==0){
+		$list = explode('&', $video);
+		$video = reset($list);
+	}
+		
+	$conn 		= new Connection();
+	$conn->db( $config->sql_dbname() );
+
+	$SqlQuery 	= "SELECT * FROM $table WHERE video_url = '$video' AND mp3_ready = '1' LIMIT 1;";
+	$MySqlArray = $conn->doSQLQuery( $SqlQuery );
+
+	if ( $MySqlArray ) {
+		while( $sql_results = mysql_fetch_array($MySqlArray)) {
+			$video_id 			= $sql_results["video_id"];
+			$video_author 		= $sql_results["video_author"];
+			$video_image 		= $sql_results["video_image"];
+			$video_duration 	= $sql_results["video_duration"];
+			$video_views 		= $sql_results["video_views"];
+			$video_title 		= $sql_results["video_title"];
+			$video_category 	= $sql_results["video_category"];
+			$video_content 		= $sql_results["video_content"];
+			$video_embedding 	= $sql_results["video_embedding"];
+			$mp3_ready 			= $sql_results["mp3_ready"];
+			$mp3_id 			= $sql_results["mp3_id"];
+			$mp3_error 			= $sql_results["mp3_error"];	
+		}; # while( $sql_results = mysql_fetch_array($results)) { }
+		
+		$html_title 	= substr($video_title, 0, 50) . " als MP3 downloaden";
+		$desc_title 	= substr($songtext_title, 0, 50) . " als MP3 downloaden";
+		$searchTitle 	= trim(preg_replace("/\([^)]+\)/","", $video_title));
+		$SongtextRawContent = $search->SphinxSearch($searchTitle);
+		list( $songtext_title,$songtext_artist,$songtext_content ) = explode('#####', $SongtextRawContent[0] );
+		$lang				= $function->GetLanguageFromString($songtext_content);
+		
+		if (strlen($songtext_title)<3){
+			$songtext_title = $video_title;
+		}
+		
+		$duration	= $function->getDuration($songtext_title);
+		$content = array_merge(
+			array('title_content'=>$video_title), 
+			array('image_content'=>$video_image), 
+			array('author_content'=>$video_author), 
+			array('category_content'=>$video_category), 
+			array('lenght_content'=>$video_duration), 
+			array('views_content'=>$video_views), 
+			array('raw_content'=>$video_content), 
+			array('embedding_content'=>$video_embedding),
+			array('title_html_de'=>$html_title),
+			array('video_id'=>$video_id),
+			array('video_url'=>$video_url),
+			array('keyword_de'=>"$video_title, $html_title, $songtext_title"),
+			array('description_de'=>$desc_title),
+			array('songtext_artist'=>$songtext_artist),
+			array('songtext_title'=>$songtext_title),
+			array('songtext_content'=>$songtext_content),
+			array('songtext_lang'=>$lang),
+			array('duration'=>$duration),
+			array('canonical_tag'=>"http://".$cache_uri)
+		);
+	
+		if (strlen($video_id) == 32 && strlen($mp3_id) == 32 && $mp3_ready == 1 ){
+			$design->setPath( $config->getTemplatePath('index_page') );
+			$design->display_cache('content_de', $content, true, 3600*24*3);
+			
+			exit(0);
+		}	
+	}
+	
+	/*
+		Check here for already existing converted videos
+		END: ENDING 
+	*/
+		
+	$objSSDTube->identify($video, true);
+	$visitorVideo = $objSSDTube->embed();
+
+	$video_image =<<<IMAGE
+<figure><img class="photo" src="$objSSDTube->thumbnail_0_url" width="$objSSDTube->thumbnail_0_width" height="$objSSDTube->thumbnail_0_height" alt="$objSSDTube->title" style="float:left;margin-right:20px;" /></figure>
+IMAGE;
+	//$video_image 	= str_replace($video_image,"/","");
+	
+	$str 			= $function->autolink($objSSDTube->content, array("target"=>"_blank","rel"=>"nofollow"));	
+	$IP 			= $function->getip();
+
+	$video_url		= $video;
+	$video_author	= $function->secureString($objSSDTube->author);
+	$video_duration	= $function->secureString($objSSDTube->duration);
+	$video_views	= $function->secureString($objSSDTube->viewcount);
+	$video_title	= $objSSDTube->title;
+	$video_category	= $function->secureString($objSSDTube->category);
+	$video_content	= $function->secureString($str);
+	$video_id		= md5(time() . date("Ymdhis") .$video_title.$video_embedding.$video_content.$video_category.$video_views.$IP.crypt(uniqid(rand(),1)).uniqid(rand(),true));
+
+	$video_title 	= str_replace("&","",$video_title );
+	$searchTitle 	= trim(preg_replace("/\([^)]+\)/","", $video_title));
+	$SongtextRawContent = $search->SphinxSearch($searchTitle);
+	list( $songtext_title,$songtext_artist,$songtext_content ) = explode('#####', $SongtextRawContent[0] );
+	$lang				= $function->GetLanguageFromString($songtext_content);
+	
+	if (strlen($songtext_title)<2){
+		$songtext_title = $video_title;
+	} 
+	if (strlen($songtext_artist)<2){
+		list($songtext_artist,) = explode("-",$searchTitle);
+	}
+
+	$html_title 	= substr($video_title, 0, 50) . " zu MP3 umwandeln";
+	$desc_title 	= substr($songtext_title, 0, 50) . " als MP3 downloaden";
+	$html_title_en 	= substr($video_title, 0, 50) . " convert to MP3";
+	$desc_title_en 	= substr($songtext_title, 0, 50) . " download as MP3";
+	$duration		= $function->getDuration($songtext_title);
+	
+	$content = array_merge(
+		array('title_content'=>$video_title), 
+		array('image_content'=>$video_image), 
+		array('author_content'=>$video_author), 
+		array('category_content'=>$video_category), 
+		array('lenght_content'=>$video_duration), 
+		array('views_content'=>$video_views), 
+		array('raw_content'=>$str), 
+		array('embedding_content'=>$visitorVideo),
+		array('title_html_de'=>$html_title),
+		array('title_html_en'=>$html_title_en),
+		array('video_id'=>$video_id),
+		array('video_url'=>$video_url),
+		array('keyword_de'=>"$video_title, $html_title, $songtext_title, "),
+		array('keyword_en'=>"$video_title, $html_title_en, $songtext_title, "),
+		array('description_de'=>$desc_title),
+		array('description_en'=>$desc_title_en),
+		array('songtext_artist'=>$songtext_artist),
+		array('songtext_title'=>$songtext_title),
+		array('songtext_content'=>$songtext_content),
+		array('songtext_lang'=>$lang),
+		array('duration'=>$duration),
+		array('canonical_tag'=>"http://".$cache_uri)
+	);
+	
+	$conn 		= new Connection();
+	$conn->db( $config->sql_dbname() );
+	
+	$SqlQuery 		= "INSERT INTO $table (video_url,video_id,video_author,video_image,video_duration,video_views,video_title,video_category,video_content,video_embedding) VALUES('$video_url','$video_id','$video_author','$video_image','$video_duration','$video_views','$video_title','$video_category','$video_content','$visitorVideo');";
+	$conn->doSQLQuery( $SqlQuery );
+					
+	$design->setPath( $config->getTemplatePath('index_page') );
+	$design->display_cache('content_de', $content, true, 3600*24*3);
+
+	$perl 		= $config->perl_exec();
+	$convert 	= $config->perl_script_path();
+	//echo "$perl $convert --video_url=$video_url";
+	
+	$video_url_safe = escapeshellcmd($video_url);
+	$last_line = system("$perl $convert --video_url=$video_url_safe");
+	
+	//echo "last_line=$last_line";
+	exit(0);
+
+} // if (!empty($_POST['video'])) {
+
+
+// Lyrics Verzeichnis Links auf der Startseite anzeigen
+// AA-ZZ combinations
+$linking_texts 		.= "";
+$aacount 			= 1;
+$flag 				= 0;
+$maxStartDirCount 	= $config->lyrics_startpage_direntry_count();
+
+foreach(range('A', 'Z') as $letter1) {
+	foreach(range('A', 'Z') as $letter2) {
+        $zufall 		= rand(1,100);
+		
+		$l 				= strtolower($letter1 . $letter2);
+		$lgro			= strtoupper($l);
+				
+		if ( $aacount <= $maxStartDirCount && $zufall >=97){
+			$letter_count	= $function->GetLettersCount($l);
+			if ( $letter_count >= 1 && $aacount < $maxStartDirCount) {
+				$linking_texts .=<<<LETTER
+<a href="/lyrics/verzeichnis.php?l=$l" class="url" itemprop="url" lang="de" title="Ansicht der Lyrics die mit $lgro beginnen">$lgro</a>&nbsp;-&nbsp;
+LETTER;
+				$aacount++;
+			} elseif ( $letter_count >= 1 && $aacount == $maxStartDirCount) {
+				$linking_texts .=<<<LETTER
+<a href="/lyrics/verzeichnis.php?l=$l" class="url" itemprop="url" lang="de" title="Ansicht der Lyrics die mit $lgro beginnen">$lgro</a>&nbsp;
+LETTER;
+				$aacount++;
+			} // if ( $letter_count >= 1 ) 
+			
+		} // if ( $aacount <= $maxStartDirCount && $zufall >=97){
+	} // foreach(range('A', 'Z') as $letter2) {
+} //foreach(range('A', 'Z') as $letter1) {
+$linking_texts .= "</h3>";
+
+
+/*
+// mp3.php more results: START
+$conn 		= new Connection();
+$conn->db( $config->sql_dbname() );
+
+//$SqlQuery 	= "SELECT video_id,video_title FROM $table WHERE mp3_ready = '1' ORDER BY RAND() LIMIT 0,15;"; // bei zuvielen einträgen php random
+$SqlQuery 	= "SELECT video_id,video_title FROM $table WHERE 1=1 ORDER BY RAND() LIMIT 0,10;";
+$MySqlArray = $conn->doSQLQuery( $SqlQuery );
+$count = 0;
+$linking_texts .= "<p><ul><h2><strong>Mehr umgewandelte MP3s mit Liedtexten downloaden:</strong></h2><br />";
+
+if ( $MySqlArray ) {
+	while( $sql_results = mysql_fetch_array($MySqlArray)) {
+		$video_id		= $sql_results["video_id"];
+		$video_title 	= $sql_results["video_title"];
+		$html_title 	= substr($video_title, 0, 85) . " als MP3 downloaden";
+		if ( $count < 4 && strlen($video_title) > 3){
+			$linking_texts .= <<< EOT
+<li><h3><strong><b><a class="url" href="/mp3.php?v=$video_id" rel="me" itemprop="url" lang="de">$html_title</a></strong></b></h3></li>
+EOT;
+		} elseif ( $count > 4 && $count <= 7 && strlen($video_title) > 3){
+			$linking_texts .= <<< EOT
+<li><strong><b><a class="url" href="/mp3.php?v=$video_id" rel="me" itemprop="url" lang="de">$html_title</a></strong></b></li>
+EOT;
+		} elseif ( $count > 7 && $count <= 10 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><strong><a class="url" href="/mp3.php?v=$video_id" rel="me" itemprop="url" lang="de">$html_title</a></strong></li>
+EOT;
+		} elseif ( $count > 10 && $count <= 13 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><b><a class="url" href="/mp3.php?v=$video_id" rel="me" itemprop="url" lang="de">$html_title</a></b></li>
+EOT;
+		} elseif ( $count > 13 && $count <= 17 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><a class="url" href="/mp3.php?v=$video_id" rel="me" itemprop="url" lang="de">$html_title</a></li>
+EOT;
+		}
+		$count++;
+	}; # while( $sql_results = mysql_fetch_array($results)) { }
+	$linking_texts .="<p/></ul>";
+}
+// mp3.php more results: END
+*/
+	
+// songtexts more results: START
+/*
+$conn 		= new Connection();
+$conn->db( $config->sql_sphinx_dbname() );
+$maxresults 	= $config->yt_result_count_max();
+$entrys 		= rand(1,$config->yt_songtext_count()); 
+$SqlQuery 		= "SELECT title FROM ".$config->sql_sphinx_table()." WHERE id >0 LIMIT $entrys,$maxresults;";
+//$SqlQuery 		= "SELECT title FROM ".$config->sql_sphinx_table()." WHERE id >0 LIMIT $entrys,3;";
+$MySqlArray222  = $conn->doSQLQuery( $SqlQuery );
+$count 			= 0;	
+
+$linking_texts .= "<ul>Youtube Videos suchen, umwandeln und mit Songtext downloaden:";
+if ( $MySqlArray222 ) {
+	while( $sql_results = mysql_fetch_array($MySqlArray222)) {
+		$video_title	= strtolower(str_replace(" ","+",trim($sql_results["title"])));
+		$html_title 	= substr(trim($sql_results["title"]), 0, 50) . " als Youtube Video suchen";
+		if ( $count < 2 && strlen($video_title) > 3){
+			$linking_texts .= <<< EOT
+<li><h4><strong><b><a class="url" href="/search.php?video=$video_title" rel="me" itemprop="url">$html_title</a></strong></b></h4></li>
+EOT;
+		} elseif ( $count > 2 && $count <= 5 && strlen($video_title) > 3){
+			$linking_texts .= <<< EOT
+<li><strong><b><a class="url" href="/search.php?video=$video_title" rel="me" itemprop="url">$html_title</a></strong></b></li>
+EOT;
+		} elseif ( $count > 5 && $count <= 7 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><strong><a class="url" href="/search.php?video=$video_title" rel="me" itemprop="url">$html_title</a></strong></li>
+EOT;
+		} elseif ( $count > 7 && $count <= 10 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><b><a class="url" href="/search.php?video=$video_title" rel="me" itemprop="url">$html_title</a></b></li>
+EOT;
+		} elseif ( $count > 10 && $count <= 12 && strlen($video_title) > 3 ){
+			$linking_texts .= <<< EOT
+<li><a class="url" href="/search.php?video=$video_title" rel="me" itemprop="url">$html_title</a></li>
+EOT;
+		}
+		$count++;
+	}; # while( $sql_results = mysql_fetch_array($results)) { }
+	$linking_texts .="</ul>";
+}
+// songtexts more results: END
+*/	
+
+// random songtext
+$conn 		= new Connection();
+$conn->db( $config->sql_sphinx_dbname() );
+$entrys 			= rand(1,$config->yt_songtext_count()); 
+$SqlQuery 			= "SELECT artist,title,songtext FROM ".$config->sql_sphinx_table(). " WHERE LENGTH(title)>2 && LENGTH(artist)>2 LIMIT $entrys,1;";
+$MySqlArray 		= $conn->doSQLQuery( $SqlQuery );
+while( $sql_results = mysql_fetch_array($MySqlArray)) {
+	$songtext_artist	= trim($sql_results['artist']);
+	$songtext_title		= trim($sql_results['title']);
+	$songtext_title_search	= strtolower(str_replace(" ","+",trim($sql_results["title"])));
+	$songtext_content	= trim($sql_results['songtext']);
+	$songtext_content 	= preg_replace('#(<br */?>\s*)+#i', '<br />', $songtext_content);
+}
+
+// random songtext
+$lang		= $function->GetLanguageFromString($songtext_content);
+$duration	= $function->getDurationEN($songtext_title);
+$desc_title = "Komm und wandel dein YouTube Video kostenlos zu MP3 mit Lyrics um! Verknüpft mit dem größten Songtext Verzeichnis der Welt - mit Android APP.";
+$desc_title_en = "Come and convert your Youtube Video to 192 Kbit/s quality MP3 Audio. Combined with the biggest Songtext Archive in the world - with Android App!";
+
+$content 	= array_merge(
+	array('title_content'=>"Gib hier deine YouTube Video Webseite ein:<br /> z.B. https://www.youtube.com/watch?v=Kh2FRFhS7QY"), 
+	array('title_html_de'=>"Ein legaler YouTube zu MP3 Konverter und Downloader"),
+	array('title_html_en'=>"Legal YouTube to MP3 Converter and Downloader"),
+	array('linking_text_content'=>$linking_texts),
+	array('keyword_de'=>"Youtube MP3 Konverter, $songtext_artist, $songtext_title"),
+	array('keyword_en'=>"Youtube MP3 Converter, $songtext_artist, $songtext_title"),
+	array('description_de'=>$desc_title),
+	array('description_en'=>$desc_title_en),
+	array('songtext_artist'=>$songtext_artist),
+	array('songtext_title'=>$songtext_title),
+	array('songtext_title_search'=>$songtext_title_search),
+	array('songtext_content'=>$songtext_content),
+	array('songtext_lang'=>$lang),
+	array('duration'=>$duration),
+	array('canonical_tag'=>"http://".$cache_uri)
+);	
+
+	
+$design->setPath( $config->getTemplatePath('index_page') );
+$design->display_cache('startpage', $content, true, 3600*24*3);
+/*
+if ( preg_match('/(DE|CH|AT|LI)/i',$countryCode)  ){
+	//echo "deutsche sprache: $countryCode";
+	$design->display_cache('startpage', $content, true, 3600*24*3);
+} else {
+	//echo "andere sprache: $countryCode";
+	$design->display_cache('startpage_en', $content, true, 3600*24*3);
+}
+*/
+exit(0);
+?>

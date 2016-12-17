@@ -1,0 +1,1083 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html
+xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US" prefix="og: http://ogp.me/ns#"><head
+profile="http://gmpg.org/xfn/11"> <script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-content/plugins/wp-minify/cache/d082dac0ae155e79b5c792f94738795c.js?m=1388343043'></script> <meta
+http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Sphinx search performance optimization: multi-threaded search</title><link
+rel="Shortcut Icon" href="http://www.mysqlperformanceblog.com/wp-content/themes/news/images/favicon.ico" type="image/x-icon" /><link
+rel="stylesheet" href="http://www.mysqlperformanceblog.com/wp-content/themes/news/style.css" type="text/css" media="screen" /><meta
+name="description" content="Sphinx has the ability to do distributed search out of the box. You can use this feature to your advantage even if your data fits on one machine. Learn how."/><link
+rel="canonical" href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/" /><meta
+property="og:locale" content="en_US" /><meta
+property="og:type" content="article" /><meta
+property="og:title" content="Sphinx search performance optimization: multi-threaded search" /><meta
+property="og:description" content="Sphinx has the ability to do distributed search out of the box. You can use this feature to your advantage even if your data fits on one machine. Learn how." /><meta
+property="og:url" content="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/" /><meta
+property="og:site_name" content="MySQL Performance Blog" /><meta
+property="article:tag" content="FullText Search" /><meta
+property="article:tag" content="Performance" /><meta
+property="article:tag" content="Sphinx" /><meta
+property="article:tag" content="Tips" /><meta
+property="article:section" content="MySQL" /><meta
+property="article:published_time" content="2013-01-16T08:27:09+00:00" /><meta
+property="article:modified_time" content="2013-01-17T06:33:26+00:00" /><link
+rel="alternate" type="application/rss+xml" title="MySQL Performance Blog &raquo; Feed" href="http://www.mysqlperformanceblog.com/feed/" /><link
+rel="alternate" type="application/rss+xml" title="MySQL Performance Blog &raquo; Comments Feed" href="http://www.mysqlperformanceblog.com/comments/feed/" /><link
+rel="alternate" type="application/rss+xml" title="MySQL Performance Blog &raquo; Sphinx search performance optimization: multi-threaded search Comments Feed" href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/feed/" /><link
+rel='stylesheet' id='tfg_style-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/percona-social-share/tfg_style.css?ver=3.8' type='text/css' media='all' /><link
+rel='stylesheet' id='crayon-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/crayon-syntax-highlighter/css/min/crayon.min.css?ver=2.4.3' type='text/css' media='all' /><link
+rel='stylesheet' id='crayon-theme-familiar-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/crayon-syntax-highlighter/themes/familiar/familiar.css?ver=2.4.3' type='text/css' media='all' /><link
+rel='stylesheet' id='crayon-font-monaco-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/crayon-syntax-highlighter/fonts/monaco.css?ver=2.4.3' type='text/css' media='all' /><link
+rel='stylesheet' id='wp-polls-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/wp-polls/polls-css.css?ver=2.63' type='text/css' media='all' /><link
+rel='stylesheet' id='easy_table_style-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/easy-table/themes/cuscosky/style.css?ver=1.4' type='text/css' media='all' /><link
+rel='stylesheet' id='SZArchiveWidget_style-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/norman-advanced-archive-widget/styles.css?ver=3.8' type='text/css' media='all' /><link
+rel='stylesheet' id='sphinxStyleSheets-css'  href='http://www.mysqlperformanceblog.com/wp-content/plugins/wordpress-sphinx-plugin/templates/sphinxsearch.css?ver=3.8' type='text/css' media='all' /> <script type='text/javascript'>/*  */
+var CrayonSyntaxSettings = {"version":"2.4.3","is_admin":"0","ajaxurl":"http:\/\/www.mysqlperformanceblog.com\/wp-admin\/admin-ajax.php","prefix":"crayon-","setting":"crayon-setting","selected":"crayon-setting-selected","changed":"crayon-setting-changed","special":"crayon-setting-special","orig_value":"data-orig-value","debug":""};
+var CrayonSyntaxStrings = {"copy":"Press %s to Copy, %s to Paste","minimize":"Click To Expand Code"};
+/*  */</script> <script type='text/javascript'>/*  */
+var samAjax = {"ajaxurl":"http:\/\/www.mysqlperformanceblog.com\/wp-content\/plugins\/simple-ads-manager\/sam-ajax.php","level":"3"};
+/*  */</script> <link
+rel="EditURI" type="application/rsd+xml" title="RSD" href="http://www.mysqlperformanceblog.com/xmlrpc.php?rsd" /><link
+rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://www.mysqlperformanceblog.com/wp-includes/wlwmanifest.xml" /><meta
+name="generator" content="WordPress 3.8" /><link
+rel='shortlink' href='http://www.mysqlperformanceblog.com/?p=12351' /><style type="text/css">.wp-polls .pollbar {
+	margin: 1px;
+	font-size: 6px;
+	line-height: 8px;
+	height: 8px;
+	background-image: url('http://www.mysqlperformanceblog.com/wp-content/plugins/wp-polls/images/default/pollbg.gif');
+	border: 1px solid #c8c8c8;
+}</style><link
+rel="stylesheet" type="text/css" href="http://www.mysqlperformanceblog.com/wp-content/plugins/wp-recaptcha/recaptcha.css" /><link
+rel='canonical' href='http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/' /><style type="text/css">#header {
+            background: url(http://www.mysqlperformanceblog.com/wp-content/themes/news/images/header.png) scroll no-repeat 0 0;
+            height: px;
+        }
+        .header-image #title-area, .header-image #title-area #title, .header-image #title-area #title a {
+            height: px;
+        }</style> <script type="text/javascript">var analyticsFileTypes = ['tgz','pdf'];
+                            var analyticsEventTracking = 'enabled';</script> <script type="text/javascript">var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-343802-1']);
+    _gaq.push(['_addDevId', 'i9k95']); // Google Analyticator App ID with Google
+	_gaq.push(['_trackPageview']);
+	(function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		                ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		                var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	})();</script> </head><body
+class="single single-post postid-12351 single-format-standard content-sidebar"><div
+id="wrap"><div
+id="topnav"><div
+class="topnav-left"><p>December 29, 2013</p></div><div
+class="topnav-right"><ul
+id="menu-social-networking" class="topnav superfish"><li
+id="menu-item-4609" class="facebook-icon menu-item menu-item-type-custom menu-item-object-custom menu-item-4609"><a
+href="http://www.facebook.com/Percona">Facebook</a></li><li
+id="menu-item-4610" class="twitter-icon menu-item menu-item-type-custom menu-item-object-custom menu-item-4610"><a
+href="http://twitter.com/Percona">Twitter</a></li><li
+id="menu-item-4611" class="linkedin-icon menu-item menu-item-type-custom menu-item-object-custom menu-item-4611"><a
+href="http://www.linkedin.com/companies/percona">LinkedIn</a></li><li
+id="menu-item-5250" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-5250"><a
+href="http://www.amazon.com/MySQL-Performance-Blog/dp/B004SPAKUI/?tag=perinc-20">Kindle Edition</a></li></ul></div></div><div
+id="header"><div
+class="wrap"><div
+id="title-area"><p
+id="title"><a
+href="http://www.mysqlperformanceblog.com/" title="MySQL Performance Blog">MySQL Performance Blog</a></p><p
+id="description">Percona&#039;s MySQL &amp; InnoDB performance and scalability blog</p></div><div
+class="widget-area"><div
+id="text-9" class="widget widget_text"><div
+class="widget-wrap"><div
+class="textwidget"><img
+src="http://www.mysqlperformanceblog.com/wp-content/uploads/2013/09/percona_logo.239x55.jpg" align="right" style="margin-right:20px; " /></div></div></div></div></div></div><div
+id="nav"><div
+class="wrap"><ul
+id="menu-percona-cross-sell-links" class="nav"><li
+id="menu-item-4603" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4603"><a
+href="http://www.percona.com/mysql-consulting">MySQL Consulting</a></li><li
+id="menu-item-4604" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4604"><a
+href="http://www.percona.com/mysql-support">MySQL Support</a></li><li
+id="menu-item-4605" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4605"><a
+href="http://www.percona.com/training">MySQL Training</a></li><li
+id="menu-item-6078" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6078"><a
+href="http://www.percona.com/live">Conferences</a></li><li
+id="menu-item-4606" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4606"><a
+href="http://www.percona.com/software/percona-server">Percona Server</a></li><li
+id="menu-item-4607" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4607"><a
+href="http://www.percona.com/software/percona-xtrabackup">Percona XtraBackup</a></li><li
+id="menu-item-4608" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4608"><a
+href="http://www.percona.com/development">Custom Dev</a></li><li
+class="right rss"><a
+rel="nofollow" href="http://www.mysqlperformanceblog.com/feed/">Posts</a><a
+rel="nofollow" href="http://www.mysqlperformanceblog.com/comments/feed/">Comments</a></li></ul></div></div><div
+id="subnav"><div
+class="wrap"><ul
+class="nav"><li
+class="cat-item cat-item-15"><a
+href="http://www.mysqlperformanceblog.com/category/benchmarks/" title="Benchmarks results and discussions">Benchmarks</a></li><li
+class="cat-item cat-item-237"><a
+href="http://www.mysqlperformanceblog.com/category/dba-insight/" title="View all posts filed under Insight for DBAs">Insight for DBAs</a></li><li
+class="cat-item cat-item-238"><a
+href="http://www.mysqlperformanceblog.com/category/developer-insight/" title="View all posts filed under Insight for Developers">Insight for Developers</a></li><li
+class="cat-item cat-item-239"><a
+href="http://www.mysqlperformanceblog.com/category/hardware-storage/" title="View all posts filed under Hardware and Storage">Hardware and Storage</a></li><li
+class="cat-item cat-item-240"><a
+href="http://www.mysqlperformanceblog.com/category/cloud-nosql/" title="View all posts filed under Cloud and NoSQL">Cloud and NoSQL</a></li><li
+class="cat-item cat-item-241"><a
+href="http://www.mysqlperformanceblog.com/category/percona-software/" title="View all posts filed under Percona Software">Percona Software</a></li><li
+class="cat-item cat-item-242"><a
+href="http://www.mysqlperformanceblog.com/category/events-announcements/" title="View all posts filed under Events and Announcements">Events and Announcements</a></li></ul></div></div><div
+id="inner"><div
+id="content-sidebar-wrap"><div
+id="content" class="hfeed"><div
+class="post-12351 post type-post status-publish format-standard hentry category-mysql tag-fulltext-search tag-performance tag-sphinx tag-tips"> <span
+class="alignleft archive-author-gravatar"><img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=65&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D65&amp;r=G' class='avatar avatar-65 photo' height='65' width='65' /></span><h1 class="entry-title">Sphinx search performance optimization: multi-threaded search</h1><div
+class="post-info"><span
+class="date published time" title="2013-01-16T08:27:09-0500">January 16, 2013</span> By <span
+class="author vcard"><span
+class="fn"><a
+href="http://www.mysqlperformanceblog.com/author/inner/" title="Posts by Aurimas Mikalauskas" rel="author">Aurimas Mikalauskas</a></span></span> <span
+class="post-comments"><a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comments">16 Comments</a></span><div
+class="postinfoSharecontainerBox" style="background-color:#F0F4F9;"><div
+style="float:left; width:85px;padding-right:10px; margin:4px 4px 4px 4px;height:30px;"> <iframe
+src="http://www.facebook.com/plugins/like.php?href=http%3A%2F%2Fwww.mysqlperformanceblog.com%2F2013%2F01%2F16%2Fsphinx-search-performance-optimization-multi-threaded-search%2F&amp;layout=button_count&amp;show_faces=false&amp;width=85&amp;action=like&amp;font=verdana&amp;colorscheme=light&amp;height=21" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width=85px; height:21px;" allowTransparency="true"></iframe></div><div
+style="float:left; width:80px;padding-right:10px; margin:4px 4px 4px 4px;height:30px;"> <g:plusone size="medium" href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/"></g:plusone></div><div
+style="float:left; width:95px;padding-right:10px; margin:4px 4px 4px 4px;height:30px;"> <a
+href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/"  data-text="Sphinx search performance optimization: multi-threaded search" data-count="horizontal">Tweet</a></div><div
+style="float:left; width:105px;padding-right:10px; margin:4px 4px 4px 4px;height:30px;"><script type="in/share" data-url="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/" data-counter="right"></script></div><div
+style="float:left; width:85px;padding-right:10px; margin:4px 4px 4px 4px;height:30px;"><script src="http://www.stumbleupon.com/hostedbadge.php?s=1&amp;r=http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/"></script></div></div><div
+style="clear:both"></div><div
+style="padding-bottom:4px;"></div></div><div
+class="entry-content"><p>Queries in MySQL, Sphinx and many other database or search engines are typically single-threaded. That is when you issue a single query on your brand new r910 with 32 CPU cores and 16 disks, the maximum that is going to be used to process this query at any given point is 1 CPU core and 1 disk. In fact, only one or the other.<br
+/> <span
+id="more-12351"></span><br
+/> Seriously, if query is CPU intensive, it is only going to be using 3% of the available CPU capacity (for the same 32-core machine). If disk IO intensive &#8211; 6% of the available IO capacity (for the 16-disk RAID10 or RAID0 for that matter).</p><p>Let me put it another way. If your MySQL or Sphinx query takes 10s to run on a machine with a single CPU core and single disk, putting it on a machine with 32 such cores and 16 such disks will not make it any better.</p><p>But you knew this already. Question is &#8211; can you do something about it?</p><p>In case of Sphinx &#8211; indeed you can! And with very little effort. In fact, it does not require any changes to your application or database whatsoever, it is only a matter of small changes to the sphinx configuration.</p><h2>The Plan</h2><p>First of all, let me explain what we are trying to achieve here.</p><p>Sphinx has the ability to do distributed search out of the box &#8211; it was designed to scale out that way very early on. If your sphinx index does not fit to one machine, you would index different parts of it from different machines and then you would have an aggregator node that receives the request from application, issues search requests to all data nodes in parallel, merges results from all of the data nodes and returns results back to the application as if it was just one server serving the request in the first place.</p><p>Well, guess what &#8211; you can actually utilize this feature to your advantage even if your data can easily fit into one machine and all you want is your queries to be many times faster. Even more so, Sphinx now supports this out of the box, so you don&#8217;t need to pretend you are querying remote nodes.</p><p>Also, you get a bonus: once you configure server for distributed search, you can do indexing in parallel too!</p><p>Word of caution: while this technique will improve most types of search queries, there are some that aren&#8217;t going to benefit greatly from parallel execution. The reason is that while search is done on data nodes (even if local ones) and in parallel, merging of results is done by the aggregator and therefore it is single-threaded. Merging includes some CPU-intensive operations such as ranking, ordering or even COUNT with GROUP BY and if data nodes return large amounts of data to post-process, aggregator may well become a bottle-neck due to its single-threaded nature.</p><p>This is however easy to check &#8211; look at your Sphinx query log and look at the number of results matched per query &#8211; this should give you a clue.</p><h2>Execution</h2><p>Let us assume you have this one index on one server with the following basic configuration (many irrelevant details omitted):</p><p></p><div
+id="crayon-52c0724836cd8805112729" class="crayon-syntax crayon-theme-familiar crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; float: none; clear: both; font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-toolbar" data-settings=" show" style="font-size: 12px !important;height: 18px !important; line-height: 18px !important;"><span
+class="crayon-title"></span><div
+class="crayon-tools" style="font-size: 12px !important;height: 18px !important; line-height: 18px !important;"><div
+class="crayon-button crayon-nums-button" title="Toggle Line Numbers"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-plain-button" title="Toggle Plain Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-wrap-button" title="Toggle Line Wrap"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-expand-button" title="Expand Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-copy-button" title="Expand Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-popup-button" title="Open Code In New Window"><div
+class="crayon-button-icon"></div></div><span
+class="crayon-language">Shell</span></div></div><div
+class="crayon-info" style="min-height: 16.8px !important; line-height: 16.8px !important;"></div><div
+class="crayon-plain-wrap"><textarea wrap="off" class="crayon-plain print-no" data-settings="click" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 12px !important; line-height: 15px !important;">
+source src1
+{
+	type = mysql
+	sql_query = SELECT id, text FROM table
+}
+index idx1
+{
+	type = plain
+	source = src1
+}
+searchd
+{
+	dist_threads = 0 # default
+}</textarea></div><div
+class="crayon-main" style=""><table
+class="crayon-table"><tr
+class="crayon-row"><td
+class="crayon-nums " data-settings="show"><div
+class="crayon-nums-content" style="font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-1">1</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-2">2</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-3">3</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-4">4</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-5">5</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-6">6</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-7">7</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-8">8</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-9">9</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-10">10</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-11">11</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-12">12</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-13">13</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-14">14</div><div
+class="crayon-num" data-line="crayon-52c0724836cd8805112729-15">15</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cd8805112729-16">16</div></div></td><td
+class="crayon-code"><div
+class="crayon-pre" style="font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-1"><span
+class="crayon-e">source</span><span
+class="crayon-h"> </span><span
+class="crayon-e">src1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-2"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-3"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-r">type</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">mysql</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-4"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">sql_query</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">SELECT </span><span
+class="crayon-r">id</span><span
+class="crayon-sy">,</span><span
+class="crayon-h"> </span><span
+class="crayon-e">text </span><span
+class="crayon-e">FROM </span><span
+class="crayon-i">table</span></div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-5"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-6">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-7"><span
+class="crayon-e">index</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-8"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-9"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-r">type</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">plain</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-10"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">source</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">src1</span></div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-11"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-12">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-13"><span
+class="crayon-e">searchd</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-14"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cd8805112729-15"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">dist_threads</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">0</span><span
+class="crayon-h"> </span><span
+class="crayon-p"># default</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cd8805112729-16"><span
+class="crayon-sy">}</span></div></div></td></tr></table></div></div><p></p><p>And now we want it to utilize 3 CPU cores and/or disks on a local machine for this index of ours &#8211; idx1. Here&#8217;s how we would change the configuration:</p><p></p><div
+id="crayon-52c0724836cec775977538" class="crayon-syntax crayon-theme-familiar crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; float: none; clear: both; font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-toolbar" data-settings=" show" style="font-size: 12px !important;height: 18px !important; line-height: 18px !important;"><span
+class="crayon-title"></span><div
+class="crayon-tools" style="font-size: 12px !important;height: 18px !important; line-height: 18px !important;"><div
+class="crayon-button crayon-nums-button" title="Toggle Line Numbers"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-plain-button" title="Toggle Plain Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-wrap-button" title="Toggle Line Wrap"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-expand-button" title="Expand Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-copy-button" title="Expand Code"><div
+class="crayon-button-icon"></div></div><div
+class="crayon-button crayon-popup-button" title="Open Code In New Window"><div
+class="crayon-button-icon"></div></div><span
+class="crayon-language">Shell</span></div></div><div
+class="crayon-info" style="min-height: 16.8px !important; line-height: 16.8px !important;"></div><div
+class="crayon-plain-wrap"><textarea wrap="off" class="crayon-plain print-no" data-settings="click" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 12px !important; line-height: 15px !important;">
+source src1
+{
+	type = mysql
+	sql_query = SELECT id, text FROM table
+}
+source src1p0 : src1
+{
+	sql_query = SELECT id, text FROM table WHERE id % 3 = 0;
+}
+source src1p1 : src1
+{
+	sql_query = SELECT id, text FROM table WHERE id % 3 = 1;
+}
+source src1p2 : src1
+{
+	sql_query = SELECT id, text FROM table WHERE id % 3 = 2;
+}
+index idx1_template
+{
+	type = plain
+	source = src1
+}
+index idx1p0 : idx1_template
+{
+	source = src1p0
+}
+index idx1p1 : idx1_template
+{
+	source = src1p1
+}
+index idx1p2 : idx1_template
+{
+	source = src1p2
+}
+index idx1
+{
+	type = distributed
+	local = idx1p0
+	local = idx1p1
+	local = idx1p2
+}
+searchd
+{
+	dist_threads = 3
+}</textarea></div><div
+class="crayon-main" style=""><table
+class="crayon-table"><tr
+class="crayon-row"><td
+class="crayon-nums " data-settings="show"><div
+class="crayon-nums-content" style="font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-1">1</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-2">2</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-3">3</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-4">4</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-5">5</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-6">6</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-7">7</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-8">8</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-9">9</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-10">10</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-11">11</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-12">12</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-13">13</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-14">14</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-15">15</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-16">16</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-17">17</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-18">18</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-19">19</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-20">20</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-21">21</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-22">22</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-23">23</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-24">24</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-25">25</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-26">26</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-27">27</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-28">28</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-29">29</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-30">30</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-31">31</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-32">32</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-33">33</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-34">34</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-35">35</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-36">36</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-37">37</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-38">38</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-39">39</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-40">40</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-41">41</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-42">42</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-43">43</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-44">44</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-45">45</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-46">46</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-47">47</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-48">48</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-49">49</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-50">50</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-51">51</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-52">52</div><div
+class="crayon-num" data-line="crayon-52c0724836cec775977538-53">53</div><div
+class="crayon-num crayon-striped-num" data-line="crayon-52c0724836cec775977538-54">54</div></div></td><td
+class="crayon-code"><div
+class="crayon-pre" style="font-size: 12px !important; line-height: 15px !important;"><div
+class="crayon-line" id="crayon-52c0724836cec775977538-1"><span
+class="crayon-e">source</span><span
+class="crayon-h"> </span><span
+class="crayon-e">src1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-2"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-3"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-r">type</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">mysql</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-4"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">sql_query</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">SELECT </span><span
+class="crayon-r">id</span><span
+class="crayon-sy">,</span><span
+class="crayon-h"> </span><span
+class="crayon-e">text </span><span
+class="crayon-e">FROM </span><span
+class="crayon-i">table</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-5"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-6">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-7"><span
+class="crayon-e">source </span><span
+class="crayon-i">src1p0</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">src1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-8"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-9"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">sql_query</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">SELECT </span><span
+class="crayon-r">id</span><span
+class="crayon-sy">,</span><span
+class="crayon-h"> </span><span
+class="crayon-e">text </span><span
+class="crayon-e">FROM </span><span
+class="crayon-e">table </span><span
+class="crayon-e">WHERE </span><span
+class="crayon-r">id</span><span
+class="crayon-h"> </span><span
+class="crayon-o">%</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">3</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">0</span><span
+class="crayon-sy">;</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-10"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-11">&nbsp;</div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-12"><span
+class="crayon-e">source </span><span
+class="crayon-i">src1p1</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">src1</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-13"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-14"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">sql_query</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">SELECT </span><span
+class="crayon-r">id</span><span
+class="crayon-sy">,</span><span
+class="crayon-h"> </span><span
+class="crayon-e">text </span><span
+class="crayon-e">FROM </span><span
+class="crayon-e">table </span><span
+class="crayon-e">WHERE </span><span
+class="crayon-r">id</span><span
+class="crayon-h"> </span><span
+class="crayon-o">%</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">3</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">1</span><span
+class="crayon-sy">;</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-15"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-16">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-17"><span
+class="crayon-e">source </span><span
+class="crayon-i">src1p2</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">src1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-18"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-19"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">sql_query</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">SELECT </span><span
+class="crayon-r">id</span><span
+class="crayon-sy">,</span><span
+class="crayon-h"> </span><span
+class="crayon-e">text </span><span
+class="crayon-e">FROM </span><span
+class="crayon-e">table </span><span
+class="crayon-e">WHERE </span><span
+class="crayon-r">id</span><span
+class="crayon-h"> </span><span
+class="crayon-o">%</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">3</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">2</span><span
+class="crayon-sy">;</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-20"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-21">&nbsp;</div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-22"><span
+class="crayon-e">index</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1_template</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-23"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-24"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-r">type</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">plain</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-25"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">source</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">src1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-26"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-27">&nbsp;</div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-28"><span
+class="crayon-e">index </span><span
+class="crayon-i">idx1p0</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1_template</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-29"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-30"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">source</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">src1p0</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-31"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-32">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-33"><span
+class="crayon-e">index </span><span
+class="crayon-i">idx1p1</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1_template</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-34"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-35"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">source</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">src1p1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-36"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-37">&nbsp;</div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-38"><span
+class="crayon-e">index </span><span
+class="crayon-i">idx1p2</span><span
+class="crayon-h"> </span><span
+class="crayon-o">:</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1_template</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-39"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-40"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">source</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">src1p2</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-41"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-42">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-43"><span
+class="crayon-e">index</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-44"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-45"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-r">type</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">distributed</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-46"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">local</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1p0</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-47"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">local</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-e">idx1p1</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-48"><span
+class="crayon-e">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">local</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-i">idx1p2</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-49"><span
+class="crayon-sy">}</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-50">&nbsp;</div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-51"><span
+class="crayon-e">searchd</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-52"><span
+class="crayon-sy">{</span></div><div
+class="crayon-line" id="crayon-52c0724836cec775977538-53"><span
+class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;</span><span
+class="crayon-v">dist_threads</span><span
+class="crayon-h"> </span><span
+class="crayon-o">=</span><span
+class="crayon-h"> </span><span
+class="crayon-cn">3</span></div><div
+class="crayon-line crayon-striped-line" id="crayon-52c0724836cec775977538-54"><span
+class="crayon-sy">}</span></div></div></td></tr></table></div></div><p></p><p>And you&#8217;re done. Of course, you need to reindex all of the indexes, but you can now do it in parallel &#8211; just run a separate indexer for every index idx1p0 through idx1p2.</p><p>BTW, using <em>div</em> operator is not necessarily the best way to split data, you may want these to be ranges by using a helper table in MySQL to define those ranges, mixing it with <a
+href="http://sphinxsearch.com/docs/current.html#conf-sql-query-range">sql_query_range</a> or something else, depending on how your data looks like.</p><h2>Finishing line</h2><p>I always loved how Sphinx scales out easily with as many machines you need and have been running it this way for many years now, however I think I don&#8217;t utilize this feature to make queries even faster on a one-machine show nearly as often as I should. Well, it&#8217;s not like it is slow or anything, but queries are never too fast, are they? <img
+src="http://www.mysqlperformanceblog.com/wp-includes/images/smilies/icon_smile.gif" alt=":)" class="wp-smiley" /></p></div><div
+class="post-meta"><span
+class="categories">Filed Under: <a
+href="http://www.mysqlperformanceblog.com/category/mysql/" title="View all posts in MySQL" rel="category tag">MySQL</a></span> <span
+class="tags">Tagged With: <a
+href="http://www.mysqlperformanceblog.com/tag/fulltext-search/" rel="tag">FullText Search</a>, <a
+href="http://www.mysqlperformanceblog.com/tag/performance/" rel="tag">Performance</a>, <a
+href="http://www.mysqlperformanceblog.com/tag/sphinx/" rel="tag">Sphinx</a>, <a
+href="http://www.mysqlperformanceblog.com/tag/tips/" rel="tag">Tips</a></span></div></div><div
+class="author-box"><div><img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=70&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D70&amp;r=G' class='avatar avatar-70 photo' height='70' width='70' /> <strong>About Aurimas Mikalauskas</strong><br
+/><p>Aurimas joined Percona in 2006, a few months after Peter and Vadim founded the company. His primary focus is on high performance, but he also specializes in full text search, high availability, content caching techniques and MySQL data recovery.</p></div></div><div
+style="width:730px; margin:0px auto 15px;"><script type="text/javascript" src="http://www.percona.com/ads.php?size=730x95"></script></div><div
+id="comments"><h3>Comments</h3><ol
+class="comment-list"><li
+class="comment even thread-even depth-1" id="comment-1215732"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/4d81af71eb1d9b204743e638eb828219?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.coresoft.de' rel='external nofollow' class='url'>Stefan</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1215732">January 16, 2013 at 10:55 am</a></div><div
+class="comment-content"><p>Thank for this great post!</p><p>What do you think? Does it make sense to distribute my index?<br
+/> I have an 4 Core CPU (Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz) with 32GB of RAM<br
+/> but only with an RAID-1 system (containing 2 disks).</p><p>My sphinx index contains about 12 millions records with a disk size of about 2,7 GB.</p><p>Greetings,<br
+/> Stefan</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-1215940"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1215940">January 16, 2013 at 1:31 pm</a></div><div
+class="comment-content"><p>Stefan, -</p><p>If this machine is running sphinx only, you are definitely going to benefit. Even if it&#8217;s a shared box &#8211; if you don&#8217;t have many disk reads hence sphinx serves data from OS cache, it should help just as well &#8211; making 3-4 partitions should improve performance of sphinx queries 2-3 times. Note this also assumes that your queries are rather selective and do not return millions of records.</p><p>Cheers,<br
+/> Aurimas</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-1216263"><div
+class="comment-author vcard"> <img
+alt='' src='http://1.gravatar.com/avatar/fa0a8b74a87ace45a15f3770715f41bd?s=48&amp;d=http%3A%2F%2F1.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Brian</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1216263">January 16, 2013 at 5:28 pm</a></div><div
+class="comment-content"><p>Is the above config example correct? I&#8217;m trying to replicate it on my end and I see some issues.</p><p>ERROR: index &#8216;idx1p0&#8242;: source &#8216;src0&#8242; not found.</p><p>I don&#8217;t see src0 defined anywhere in the above config.</p><p>indx1p1 as configured is going to contain the entire dataset, not just 1/3rd of it as expected because it is using src1 which is defined without a % in the where query.</p><p>Same error for the 3rd index:<br
+/> indexing index &#8216;idx1p2&#8242;&#8230;<br
+/> ERROR: index &#8216;idx1p2&#8242;: source &#8216;src2&#8242; not found.<br
+/> ERROR: index &#8216;idx1p2&#8242;: no valid sources configured; skipping.</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-1217165"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1217165">January 17, 2013 at 6:35 am</a></div><div
+class="comment-content"><p>Brian, -</p><p>thanks &#8211; good catch. That was an error on my side while making the pseudo-config. You should replace &#8220;source = src0&#8243; to &#8220;source = src1p0&#8243;, &#8220;source = src1&#8243; to &#8220;source = src1p1&#8243; and &#8220;source = src2&#8243; to &#8220;source = src1p2&#8243;. I have fixed that in the post already.</p><p>Let me know if that fixes the issue.</p><p>Aurimas</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-1217553"><div
+class="comment-author vcard"> <img
+alt='' src='http://1.gravatar.com/avatar/fa0a8b74a87ace45a15f3770715f41bd?s=48&amp;d=http%3A%2F%2F1.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Brian</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1217553">January 17, 2013 at 1:02 pm</a></div><div
+class="comment-content"><p>Thanks, the config works perfectly now.</p><p>I&#8217;m troubleshooting an issue where we get zero results back after sharding the index into 4 chunks. We&#8217;ve been running a single index for a few years now, and we have 16 24 core servers handling the search side of things. For whatever reason, when we shard the index, we no longer get any results back in production. Nothing changes software side, just the sphinx config, index, and a searchd restart.</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-1217851"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1217851">January 17, 2013 at 4:05 pm</a></div><div
+class="comment-content"><p>Brian, -</p><p>I would try to query the individual shards and see if they return results. If not, chances are something went wrong with indexing and indexes are just empty. If they do, then it could be a bug on the sphinx side.</p><p>If you&#8217;re unable to figure it out, please create a forum entry and just post a link here:</p><p> <a
+href="http://www.perconaforum.com/index.php?t=thread&#038;frm_id=4&#038;" rel="nofollow">http://www.perconaforum.com/index.php?t=thread&#038;frm_id=4&#038;</a></p><p>Aurimas</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-1761615"><div
+class="comment-author vcard"> <img
+alt='' src='http://1.gravatar.com/avatar/1a7537a59984ba5f25e14bd643c2cdfd?s=48&amp;d=http%3A%2F%2F1.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Robert</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1761615">May 24, 2013 at 11:21 am</a></div><div
+class="comment-content"><p>How would you merge the indexes after this? I assume you would want to get 1 index. So, I can run the indexer for idx1p0, idx1p1, idx1p2 but how would I then get the idx1 index? If I try to run indexer for idx1, I get &#8220;skipping non-plain index &#8216;idx1&#8242;&#8230;<br
+/> &#8221;</p><p>Thanks,<br
+/> Rob</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-1762101"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1762101">May 24, 2013 at 2:14 pm</a></div><div
+class="comment-content"><p>Hi Robert, -</p><p>you don&#8217;t actually need to merge sphinx indexes &#8211; it does that on the fly. If you are using sphinxql, you can actually just list all the indexes you want to merge on the fly (e.g. SELECT cols FROM idx1p0,idx1p1,idx1p2 WHERE &#8230;), otherwise if it&#8217;s more convenient that the index looks as if it was one index, you can create a virtual index with type = distributed that has all the local indexes &#8220;merged&#8221;. See <a
+href="http://sphinxsearch.com/docs/current.html#conf-dist-threads" rel="nofollow">here</a> for some explanation.</p><p>And btw, you don&#8217;t want to run indexer for the virtual index, you want to index the local parts instead, hence only run indexer on idx1p0,idx1p1,idx1p2.</p><p>Have a nice weekend!<br
+/> Aurimas</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-1763973"><div
+class="comment-author vcard"> <img
+alt='' src='http://1.gravatar.com/avatar/1a7537a59984ba5f25e14bd643c2cdfd?s=48&amp;d=http%3A%2F%2F1.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Robert</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1763973">May 25, 2013 at 8:42 am</a></div><div
+class="comment-content"><p>Thanks Aurimas, I misunderstood the nature of how the indexes would work. Thanks for posting this also, it was a great help to me. I really does speed up the searches.</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-1768910"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-1768910">May 27, 2013 at 6:15 am</a></div><div
+class="comment-content"><p>Thanks for the feedback, Robert. There are some types of queries where it does not help (those that do a lot of post-processing after matching the search), but in many simple cases it should help indeed.</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-2466573"><div
+class="comment-author vcard"> <img
+alt='' src='http://1.gravatar.com/avatar/b20d26131db655dc108dfb180b083465?s=48&amp;d=http%3A%2F%2F1.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Osama hasan</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-2466573">September 3, 2013 at 5:10 am</a></div><div
+class="comment-content"><p>Nice Idea,<br
+/> i tested it on my local machine ( core i3 + 3G ram + sphinx 2.1.1) on 300K rows with an index of 48 M.B and  with using stopwords list , min_word_len = 1 , searching only one row and storing 5 rows as attr_string , with 6 languages in charset_table</p><p>i developed a script that search for 2000 random queries and return the mean time for each single query and the result was as follow:<br
+/> 1 thread    &gt;&gt;maximum (0.019923)  and minimum (0.019618) second per query<br
+/> 2 threads  &gt;&gt;maximum (0.018417)  and minimum (0.017915) second per query</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-2467767"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-2467767">September 3, 2013 at 7:22 am</a></div><div
+class="comment-content"><p>Osama, I realize in your case the improvement is not significant, but it really depends on quite a few things:<br
+/> - first of all, naturally the difference will be more significant for IO intensive workloads and in your case the test is definitely CPU intensive<br
+/> - secondly, search selectivity is very important here. The more selective the search is, the more benefit you get from parallel processing (because there&#8217;s less work remaining to combine the results from different threads). In your case, considering the response times, search queries are likely not very selective and so naturally post-processing (which is single-threaded) is where most time is spent<br
+/> - and third, type of queries is important. simple search queries are more likely to benefit than those doing a lot of post-processing for other reasons such as group-by with some aggregate functions.</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-3454042"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/008c6b3d0b4f4322eefb6cc9c3e0e701?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Michael</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-3454042">November 27, 2013 at 2:00 pm</a></div><div
+class="comment-content"><p>Hi, coming at this question from an &#8216;Architect&#8217; perspective so pardon any non-tech misunderstandings; will this be helpful in the case of using sphinx as auto-complete? We have a search form where each input pushes the characters to sphinx index to return the field into a selection container (Am= American/Armenia/Amsterdam). We do this since we don&#8217;t want to cache our tables client side but do want a responsive Auto-Suggest.</p><p>In load-testing we consistently find we max our user at about 20% of CPU (meaning the response times for the inputs are no longer acceptable after that cpu utilization). This is whether on VPS with 2 cores or dedicated with 64 cores.</p><p>Would this solution help in this case?  In other words would making sure Sphinx was involving all cores help make sure that the cpu is not overloaded at 20%?</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-3457710"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-3457710">November 28, 2013 at 4:15 am</a></div><div
+class="comment-content"><p>Michael, -</p><p>if your benchmark is multi-threaded, then having it max out at 20% CPU utilization does not look right, you should be able to get it way higher as you increase the number of parallel users and the response time should only increase slightly until you reach 70-80% CPU utilization.</p><p>That said, I&#8217;m guessing that either your benchmark is serializing requests (or there&#8217;s serialization at any other level), or your bottle-neck is not CPU, rather Disk IO. It is especially suspicious that 2 -vs 64 cores makes no difference.</p><p>Making a single request execute on multiple CPU cores (if that is possible depends on the design of your request) may help to increase CPU utilization (and decrease response time) for a single request and with that you will also increase the overall utilization of machine CPU (as well as you will be able to handle more user requests per given time if they are serialized). However, if you are happy wih the current response time and just want to handle more requests, then (a) make sure your benchmark is multi-threaded, (b) make sure you&#8217;re not saturating disks (and if you are, double check you are saturating a capacity of multiple disks and not one disk, which, again, realtes to request queue depth (or number of parallel requests you execute)).</p><p>I hope I&#8217;m making sense.</p></div><div
+class="reply"></div></li><li
+class="comment even thread-even depth-1" id="comment-3459464"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/008c6b3d0b4f4322eefb6cc9c3e0e701?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn">Michael</cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-3459464">November 28, 2013 at 9:45 am</a></div><div
+class="comment-content"><p>Hi Aurimas, thanks for the detailed response. More cores does give us a higher # of concurrent sessions before the response times goes haywire.  Mainly I&#8217;ve noticed it is when the cpu/networks stop scaling in a smooth way and fluctuate the response times get killed.  I agree I was looking for 75% or before things got overloaded.  In all tests the memory usage was pretty flat and very low (on 32GB + boxes) at less then 10%.</p><p>I wonder though since there are about a dozen inputs, perhaps 4-5 &#8216;core&#8217; inputs, if explicitly separating those into groups might help? For instance push Input A to Core 1, Input B to Core 2, etc.  Otherwise as I see it we have multiple users typing into different inputs and each keystroke in each input for each user in theory is overloading the same CPU. Is this even possible? If so I could take the 4 main inputs user search from and push to a core or cores.</p><p>I am not in love with the current response time which is, when not being slammed, 350ms to 600ms. I&#8217;ve noticed to return auto-suggest in a perfectly timely manner is around 250ms.  Since we create urls from the input chracters e.g. /fieldA=ABC and then push that to Sphinx, maybe we can cache those somewhere.</p><p>If you think it is possible somehow to push each field input to different cores then we will try that.</p><p>Thanks again!</p></div><div
+class="reply"></div></li><li
+class="comment byuser comment-author-inner bypostauthor odd alt thread-odd thread-alt depth-1" id="comment-3468810"><div
+class="comment-author vcard"> <img
+alt='' src='http://0.gravatar.com/avatar/ae4baa8e4f431b8039ce4d655014abd6?s=48&amp;d=http%3A%2F%2F0.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D48&amp;r=G' class='avatar avatar-48 photo' height='48' width='48' /><cite
+class="fn"><a
+href='http://www.mysqlperformanceblog.com/' rel='external nofollow' class='url'>Aurimas Mikalauskas</a></cite> <span
+class="says">says:</span></div><div
+class="comment-meta commentmetadata"> <a
+href="http://www.mysqlperformanceblog.com/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#comment-3468810">November 29, 2013 at 10:39 am</a></div><div
+class="comment-content"><p>Thanks for your response Michael. To answer your comment, unless I&#8217;m missing something, I don&#8217;t think separating inputs to different groups would do any good. Every new request should end up on a different CPU (and depending on what threading model you are using, you should see either a few threads with ps auxH or few processes with ps aux). If they end up overloading the same CPU thread, something is wrong.</p><p>As for response time, splitting data into several chunks and querying them all in parallel should help you with that, as long as most of the work is done by the data nodes and not by the aggregator (or proxy).</p><p>Caching is a different story, but yes &#8211; you can absolutely implement it. It&#8217;s not straight forward, you would most likely want to implement something like memcached cache in front, but it is definitely doable and should give you great results especially if people tend to search same stuff.</p></div><div
+class="reply"></div></li></ol><div
+class="navigation"><div
+class="alignleft"></div><div
+class="alignright"></div></div></div><div
+id="respond" class="comment-respond"><h3 id="reply-title" class="comment-reply-title">Speak Your Mind <small><a
+rel="nofollow" id="cancel-comment-reply-link" href="/2013/01/16/sphinx-search-performance-optimization-multi-threaded-search/#respond" style="display:none;">Cancel reply</a></small></h3><form
+action="http://www.mysqlperformanceblog.com/wp-comments-post.php" method="post" id="commentform" class="comment-form"><p
+class="comment-form-author"><input
+id="author" name="author" type="text" value="" size="30" tabindex="1" aria-required="true" /><label
+for="author">Name</label> <span
+class="required">*</span></p><p
+class="comment-form-email"><input
+id="email" name="email" type="text" value="" size="30" tabindex="2" aria-required="true" /><label
+for="email">Email</label> <span
+class="required">*</span></p><p
+class="comment-form-url"><input
+id="url" name="url" type="text" value="" size="30" tabindex="3" /><label
+for="url">Website</label></p><p
+class="comment-form-comment"><textarea id="comment" name="comment" cols="45" rows="8" tabindex="4" aria-required="true"></textarea></p><p
+class="form-submit"> <input
+name="submit" type="submit" id="submit" value="Post Comment" /> <input
+type='hidden' name='comment_post_ID' value='12351' id='comment_post_ID' /> <input
+type='hidden' name='comment_parent' id='comment_parent' value='0' /></p><p
+style="display: none;"><input
+type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="e3c9d7c24c" /></p><p
+style="clear: both;" class="subscribe-to-comments"> <input
+type="checkbox" checked="checked" name="subscribe" id="subscribe" value="subscribe" style="width: auto;" /> <label
+for="subscribe">Notify me of followup comments via e-mail</label></p> <script type='text/javascript'>var RecaptchaOptions = { theme : 'red', lang : 'en' , tabindex : 5 };</script><script type="text/javascript" src="http://www.google.com/recaptcha/api/challenge?k=6LeowN4SAAAAAJfC8Kr4qUUeWPj0wuUgdESkSfOh"></script> <noscript> <iframe
+src="http://www.google.com/recaptcha/api/noscript?k=6LeowN4SAAAAAJfC8Kr4qUUeWPj0wuUgdESkSfOh" height="300" width="500" frameborder="0"></iframe><br/><textarea name="recaptcha_challenge_field" rows="3" cols="40"></textarea><input
+type="hidden" name="recaptcha_response_field" value="manual_challenge"/> </noscript><div
+id="recaptcha-submit-btn-area">&nbsp;</div> <noscript><style type='text/css'>#submit {display:none;}</style><input
+name="submit" type="submit" id="submit-alt" tabindex="6" value="Submit Comment"/> </noscript></form></div></div><div
+id="sidebar" class="sidebar widget-area"><div
+id="simple_ads_manager_widget-3" class="widget simple_ads_manager_widget"><div
+class="widget-wrap"><a
+id='a28_3' class='sam_ad' href='http://www.percona.com/mysql-support' target='_self' ><img
+src='http://www.mysqlperformanceblog.com/wp-content/uploads/2011/11/percona-mysql-support-contracts.png'  alt='Percona MySQL Support Contracts'  /></a></div></div><div
+id="searchsidebarwidget-4" class="widget SearchSidebarWidget"><div
+class="widget-wrap"><h4 class="widgettitle">Search</h4> <script type="text/javascript" >function toggle_sidebar(){
+	style = document.getElementById('searchform_advanced_bar').style.display;
+	if (style == 'block')
+	{
+		document.getElementById('searchform_advanced_bar').style.display = 'none';
+		document.getElementById('searchform_advanced_bar').innerHTML = '';
+	}
+	else
+	{
+		document.getElementById('searchform_advanced_bar').style.display = 'block';
+		document.getElementById('searchform_advanced_bar').innerHTML = document.getElementById('searchform_advanced_options_bar').innerHTML;
+	}
+}
+function sphinx_search_submit(form) {
+    var input = document.getElementById('sphinx_sinput');
+    form.s.value = input.value.replace("_", ' ').replace("'", '_');
+    return true;
+}</script> <div
+id="searchbar"> <label
+for="s"> <a
+href="http://www.ivinco.com/software/wordpress-sphinx-search/"
+title="WordPress Sphinx Search Plugin by Ivinco"><img
+src="http://www.mysqlperformanceblog.com/wp-content/plugins/wordpress-sphinx-plugin/templates/img/icon-ivinco.png"
+alt="WordPress Sphinx Search Plugin by Ivinco" /></a> Search </label><form
+id="searchform" method="get" action="http://www.mysqlperformanceblog.com" onsubmit="sphinx_search_submit(this)"> <input
+type="hidden" name="s" size="15" value=""/><ul><li> <input
+type="text" id="sphinx_sinput" size="25"
+value=""/> <input
+type="submit" id="submit" value="Search" /><br/> <a
+href="javascript:void(0);" onclick="toggle_sidebar();"
+style="font-size:10px;">Advanced</a></li></ul><div
+id="searchform_advanced_bar" style="display:none;"></div></form><div
+id="searchform_advanced_options_bar" style="display:none;"><ul><li
+id="searchin">Search in: <br/> <input
+type="checkbox" id="search_posts" name="search_posts" value="true"
+checked='checked' /><label
+for="search_posts">posts</label> <br/> <input
+type="checkbox" id="search_pages" name="search_pages" value="true"
+checked='checked' /><label
+for="search_pages">pages</label> <br/> <input
+type="checkbox" id="search_comments" name="search_comments" value="true"
+checked='checked' /><label
+for="search_comments">comments</label> <br/> <input
+type="checkbox" id="search_tags" name="search_tags" value="true"
+checked='checked' /><label
+for="search_tags">tags</label></li></ul><ul><li
+id="sortby">Sort by: <br/> <input
+type="radio" id="search_sortby_date_relevance" name="search_sortby" value="date_relevance"
+checked="true" /><label
+for="search_sortby_date_relevance">Freshness &amp; Relevance</label> <br/> <input
+type="radio" id="search_sortby_rel" name="search_sortby" value="relevance"
+/><label
+for="search_sortby_rel">Relevance</label> <br/> <input
+type="radio" id="search_sortby_date" name="search_sortby" value="date"
+/><label
+for="search_sortby_date">Freshness</label></li></ul></div></div></div></div><div
+id="topsearcheswidget-5" class="widget TopSearchesWidget"><div
+class="widget-wrap"><h4 class="widgettitle">Top Searches</h4><ul><li><a
+href='http://www.mysqlperformanceblog.com/search/mysql/' title='mysql'>mysql</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/Percona+Server/' title='Percona Server'>Percona Server</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/Innodb/' title='Innodb'>Innodb</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/Xtradb/' title='Xtradb'>Xtradb</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/Xtrabackup/' title='Xtrabackup'>Xtrabackup</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/mysql+performance/' title='mysql performance'>mysql performance</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/mysql+flash/' title='mysql flash'>mysql flash</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/mysql+ssd/' title='mysql ssd'>mysql ssd</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/mysql+ec2/' title='mysql ec2'>mysql ec2</a></li><li><a
+href='http://www.mysqlperformanceblog.com/search/mariadb/' title='mariadb'>mariadb</a></li></ul></div></div><h4 class="widgettitle">Percona Webinars</h4><ul><li><a
+href='http://www.percona.com/resources/mysql-webinars/how-avoid-common-deadly-mysql-operations-mistakes'>January 22, 2014 - How to Avoid Common (but Deadly) MySQL Operations Mistakes</a></li><li><a
+href='http://www.percona.com/resources/mysql-webinars/upgrading-mysql-56-best-practices'>January 29, 2014 - Upgrading to MySQL 5.6: Best Practices</a></li><li><a
+href='http://www.percona.com/resources/mysql-webinars/whats-new-percona-xtradb-cluster-56'>February 05, 2014 - What's New in Percona XtraDB Cluster 5.6</a></li><li><a
+href='http://www.percona.com/resources/mysql-webinars/performance-monitoring-and-troubleshooting-percona-xtradb-cluster'>February 19, 2014 - Performance Monitoring and Troubleshooting of Percona XtraDB Cluster </a></li></ul><p
+style="text-align:right;"><a
+href='http://www.percona.com/webinars'>All Webinars &raquo;</a></p><br
+/><div
+id="text-5" class="widget widget_text"><div
+class="widget-wrap"><h4 class="widgettitle">ABOUT PERCONA</h4><div
+class="textwidget"><p>Percona is the oldest and largest independent MySQL support and consulting company, with a global 24×7 staff of 100+ people serving more than 2,000 customers in 50+ countries since 2006.</p><p>We offer <a
+href="http://www.percona.com/mysql-consulting" title="Percona Consulting for MySQL">Consulting</a>, <a
+href="http://www.percona.com/mysql-support" title="Percona offers enterprise-grade MySQL support">Support</a>, <a
+href="http://www.percona.com/training" title="MySQL Training from Percona">Training</a>, <a
+href="http://www.percona.com/products/remote-dba">Remote DBA</a>, and <a
+href="http://www.percona.com/development/mysql" title="Percona's developers can create custom MySQL development">Custom Server Development</a> services. We also create open source software for the MySQL community including <a
+href="http://www.percona.com/software/percona-server" title="An enhaced version of MySQL">Percona Server</a>, <a
+href="http://www.percona.com/software/percona-toolkit">Percona Toolkit</a>, <a
+href="http://www.percona.com/software/percona-xtradb-cluster">Percona XtraDB Cluster</a>, <a
+href="http://www.percona.com/software/percona-xtradb" title="Percona's fork of InnoDB">Percona XtraDB</a> and <a
+href="http://www.percona.com/software/percona-xtrabackup" title="Hot InnoDB Backups">Percona XtraBackup</a>.</p></div></div></div><h4 class="widgettitle">Percona MySQL Training</h4><ul><li><a
+href='http://www.percona.com/mysql-training/order/hou-1402'>Percona Training for MySQL - Houston on Monday, 17 February 2014</a></li><li><a
+href='http://www.percona.com/mysql-training/order/lon-1402'>Percona Training for MySQL - London on Monday, 17 February 2014</a></li><li><a
+href='http://www.percona.com/mysql-training/order/nyc-1405'>Percona Training for MySQL - New York on Monday, 12 May 2014</a></li><li><a
+href='http://www.percona.com/mysql-training/order/fra-1406'>Percona Training for MySQL - Frankfurt on Monday, 02 June 2014</a></li><li><a
+href='http://www.percona.com/mysql-training/order/sfo-1408'>Percona Training for MySQL - San Francisco on Monday, 04 August 2014</a></li></ul><p
+style="text-align:right;"><a
+href='http://www.percona.com/training/'>All Courses &raquo;</a></p><br
+/><h4 class="widgettitle">Percona Careers</h4><ul><li><a
+href='http://www.percona.com/about-us/careers/'>Web Back-end Developer</a></li><li><a
+href='http://www.percona.com/about-us/careers/'>Vice President of Professional Services</a></li><li><a
+href='http://www.percona.com/about-us/careers/'>Accounting Assistant</a></li><li><a
+href='http://www.percona.com/about-us/careers/'>Technical Account Manager [Pre-sales]</a></li><li><a
+href='http://www.percona.com/about-us/careers/'>Director of Alliances</a></li></ul><p
+style="text-align:right;"><a
+href='http://www.percona.com/about-us/careers/'>All Careers &raquo;</a></p><br
+/><div
+id="yarpp_widget-4" class="widget widget_yarpp_widget"><div
+class="widget-wrap"><h4 class="widgettitle">Related Posts</h4><div
+class='yarpp-related-widget'><ol><li><a
+href="http://www.mysqlperformanceblog.com/2013/01/15/sphinx-search-performance-optimization-attribute-based-filtering/" rel="bookmark">Sphinx search performance optimization: attribute-based filters</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2008/02/15/mysql-performance-blog-now-uses-sphinx-for-site-search/" rel="bookmark">MySQL Performance Blog now uses Sphinx for Site Search</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2006/10/30/using-sphinx-as-mysql-data-retrieval-accelerator/" rel="bookmark">Using Sphinx as MySQL data retrieval accelerator</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2007/07/23/sphinx-going-beyond-full-text-search/" rel="bookmark">Sphinx:  Going Beyond full text search</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2011/11/17/sphinx-2-0-2-beta-is-released-sphinx-users-conference/" rel="bookmark">Sphinx 2.0.2 Beta is released, Sphinx Users Conference in December</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2012/08/21/full-text-webinar/" rel="bookmark">Webinar for Full Text Search Throwdown</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2007/01/08/sphinx-developer-joins-our-team/" rel="bookmark">Sphinx Developer joins our team</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2006/06/26/full-text-search-for-all-mysql-storage-engines/" rel="bookmark">Full text search for all MySQL Storage Engines</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2009/03/24/sphinx-technologies-launch-sphinx-support/" rel="bookmark">Sphinx Technologies launches Sphinx Support</a></li><li><a
+href="http://www.mysqlperformanceblog.com/2009/04/19/talking-mysql-to-sphinx/" rel="bookmark">Talking MySQL to Sphinx</a></li></ol> <img
+src="http://yarpp.org/pixels/60129ab4cc36bb1b0e2dd162986f310d" alt="YARPP"/></div></div></div></div></div></div><div
+id="footer-widgets"><div
+class="wrap"><div
+class="footer-widgets-1"><div
+id="text-6" class="widget widget_text"><div
+class="widget-wrap"><h4 class="widgettitle">SOFTWARE FROM PERCONA</h4><div
+class="textwidget"><p>Percona's open-source software leads the industry in performance and features.</p><ul><li><a
+href="http://www.percona.com/software/percona-server" title="An enhaced version of MySQL">Percona Server</a>: an enhanced version of MySQL</li><li><a
+href="http://www.percona.com/software/percona-xtradb" title="Percona's fork of InnoDB">Percona XtraDB</a>: our fork of InnoDB</li><li><a
+href="http://www.percona.com/software/percona-xtrabackup" title="Hot InnoDB Backups">Percona XtraBackup</a>: hot InnoDB Backups</li><li><a
+href="http://www.percona.com/software/percona-xtradb-cluster">Percona XtraDB Cluster</a>: new high availability and high scalability solution.</ul></div></div></div></div><div
+class="footer-widgets-2"><div
+id="text-7" class="widget widget_text"><div
+class="widget-wrap"><h4 class="widgettitle">SERVICES FOR MYSQL USERS</h4><div
+class="textwidget"><p>Percona offers professional services for MySQL users</p><ul><li><a
+href="http://www.percona.com/mysql-consulting/overview" title="Percona Consulting for MySQL">MySQL Consulting</a></li><li><a
+href="http://www.percona.com/mysql-support" title="Percona offers enterprise-grade MySQL support">MySQL Support</a></li><li><a
+href="http://www.percona.com/training" title="MySQL Training from Percona">MySQL Training</a></li><li><a
+href="http://www.percona.com/development/mysql" title="Percona's developers can create custom MySQL development">Custom MySQL Development</a></li><li><a
+href="http://www.percona.com/products/remote-dba" title="Percona Remote DBA for MySQL">Remote DBA for MySQL</a></li></ul></div></div></div></div><div
+class="footer-widgets-3"><div
+id="text-8" class="widget widget_text"><div
+class="widget-wrap"><h4 class="widgettitle">ABOUT THIS BLOG AND PERCONA</h4><div
+class="textwidget"><ul
+style="float:left;"><li><a
+href="/about/" title="About this Blog">About This Blog</a></li><li><a
+href="/article-republishing/" title="Terms of Use">Content License</a></li><li><a
+href="http://www.percona.com/about-us/presentations" title="Percona's Technical Presentations">Presentations on MySQL</a></li><li><a
+href="http://www.percona.com/downloads" title="Percona Software Downloads">MySQL Patches</a></li><li><a
+href="http://www.percona.com/software/percona-toolkit" title="Tools for MySQL">Tools for MySQL Users</a></li><li><a
+href="http://www.percona.com/mysql-consulting/overview" title="Consulting for MySQL">Consulting for MySQL</a></li></ul><ul
+style="float:right"><li><a
+href="http://www.percona.com/about-us/careers/open-positions" title="Open Positions at Percona">Careers at Percona</a></li><li><a
+href="http://percona.tv" title="MySQL Screencast and Videos from Percona">Percona.TV Videos</a></li><li><a
+href="http://www.percona.com/forums" title="Percona Community Forums">Percona Community Forums</a></li><li><a
+href="http://www.webscalingblog.com" title="Everything About Web Scaling">Web Scaling Blog</a></li><li><a
+href="http://www.ssdperformanceblog.com/" title="Percona's blog about SSD Performance">SSD Performance Blog</a></li></ul></div></div></div></div></div></div><div
+id="footer" class="footer"><div
+class="wrap"><div
+class="gototop"><p><a
+href="http://www.percona.com/software/percona-server/" title="Powered By Percona Server"><img
+src="http://s2.percona.com/badge-percona-server-80x15.png" alt="Powered By Percona Server" width="80" height="15" /></a> <a
+href="http://www.percona.com/software/percona-xtrabackup/" title="Protected By Percona XtraBackup"><img
+src="http://s2.percona.com/badge-percona-xtrabackup-80x15.png" alt="Protected By Percona XtraBackup" width="80" height="15" /></a></p></div><div
+class="creds"><p>Copyright &copy; Percona LLC &bull; <a
+href="http://www.percona.com/contact/">Contact Us</a> &bull; MySQL and InnoDB are trademarks of Oracle Corp.</p></div></div></div></div>
+ <script src="http://munchkin.marketo.net/munchkin.js" type="text/javascript"></script> <script type="text/javascript">mktoMunchkin("828-GMD-003");</script>                <script type="text/javascript">
+                var sub = document.getElementById('submit');
+                document.getElementById('recaptcha-submit-btn-area').appendChild (sub);
+                document.getElementById('submit').tabIndex = 6;
+                if ( typeof _recaptcha_wordpress_savedcomment != 'undefined') {
+                        document.getElementById('comment').value = _recaptcha_wordpress_savedcomment;
+                }
+                document.getElementById('recaptcha_table').style.direction = 'ltr';
+                </script><script type='text/javascript' src='http://platform.twitter.com/widgets.js?ver=3.8'></script>
+<script type='text/javascript' src='http://apis.google.com/js/plusone.js?ver=3.8'></script>
+<script type='text/javascript' src='http://platform.linkedin.com/in.js?ver=3.8'></script>
+<script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-includes/js/jquery/ui/jquery.ui.core.min.js?ver=1.10.3'></script>
+<script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-includes/js/jquery/ui/jquery.ui.widget.min.js?ver=1.10.3'></script>
+<script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-includes/js/jquery/ui/jquery.ui.tabs.min.js?ver=1.10.3'></script>
+<script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-content/themes/news/js/tabs.js?ver=1.0'></script>
+<script type='text/javascript'>
+/* <![CDATA[ */
+var pollsL10n = {"ajax_url":"http:\/\/www.mysqlperformanceblog.com\/wp-admin\/admin-ajax.php","text_wait":"Your last request is still being processed. Please wait a while ...","text_valid":"Please choose a valid poll answer.","text_multiple":"Maximum number of choices allowed: ","show_loading":"1","show_fading":"1"};
+/* ]]> */
+</script>
+<script type='text/javascript' src='http://www.mysqlperformanceblog.com/wp-content/plugins/wp-polls/polls-js.js?ver=2.63'></script>
+</body>
+</html>
+<!-- Dynamic page generated in 0.846 seconds. -->
+<!-- Cached page generated by WP-Super-Cache on 2013-12-29 14:04:40 -->
+
+<!-- Compression = gzip -->

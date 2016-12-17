@@ -1,0 +1,51 @@
+
+
+/* print Rand rechts bei padding einstellen */
+
+body {
+    font-family:Verdana,Arial,Helvetica;
+    font-size: 12px;
+    margin: 0px;
+    padding: 0px;
+    background-color: #FFFFFF;
+    color: #000000;
+    text-align: left;
+    line-height: 1em;
+}
+
+.drucker {
+    font-family:Verdana,Arial,Helvetica;
+    font-size: 12px;
+    background: #FFFFFF;
+    color: #000000;
+    text-align: left;
+    line-height:160%;
+    margin: 0px;
+    padding: 0px 0px 0px 60px;
+}
+
+/* nicht drucken */
+.invisible {
+        display: none;
+         }
+td,p {
+    font-family:Verdana,Arial,Helvetica;
+    font-size: 12px;
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+h1, h2, h3, h4 {
+    font-family:Verdana,Arial,Helvetica;
+    font-size: 16px;
+    line-height:normal;
+    margin: 1em 0;
+    padding-top: 12px;
+    margin-top: 12px;
+        }
+
+.clr {
+        background-color:#ccc;
+        }
+
+/* formulare */

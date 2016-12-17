@@ -1,0 +1,5 @@
+<form method="GET" action="/songtext.php">
+		<input type="text" name="lyrics" id="video" size="45" value="Lyrics Search or Youtube Converting" onblur="if (this.value == '') {this.value = 'Lyrics Search or Youtube Converting';}" onfocus="if (this.value == 'Lyrics Search or Youtube Converting') {this.value = '';}" autocomplete="on" required />
+		<input type="submit" value="Lyrics Search" class="button" />
+		<input type="hidden" name="language" value="EN" />
+	</form>

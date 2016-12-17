@@ -1,0 +1,16 @@
+
+
+
+
+screen wget -r -nH --include /songtext/ --no-parent -N -m -e robots=off -U "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --bind-address=46.38.235.248 -p http://www.songtexte.com/
+
+
+
+---------------------
+
+$$
+
+screen wget -N -m -e robots=off -U "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -p http://www.songteksten.tv/
+
+
+wget.exe -c --convert-links -r -e robots=off -U "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:25.0) Gecko/20100101 Firefox/25.0" http://www.songteksten.net/

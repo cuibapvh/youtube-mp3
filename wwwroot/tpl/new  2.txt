@@ -1,0 +1,14 @@
+<noscript>
+<h1>Sie haben <b>kein</b> Javascript aktiviert - bitte beachten Sie die folgenden Hinweise:</h1><br /><br />
+Wir benutzen das jQuery Javascript Modul, um die Umwandlung der Videos in MP3 zu realisieren. <br />
+<b><strong><a href="http://www.enable-javascript.com/de/" rel="nofollow" target="_blank">Bitte schalten Sie Javascript auf dieser Webseite an!</a></strong></b>
+</noscript>
+
+
+
+
+<noscript>
+<h1>You <b>dont have</b> Javascript enabled - please read the following hints:</h1><br /><br />
+We use the jQuery Javascript Modul, to convert the Youtube Videos to MP3 Music.<br />
+<b><strong><a href="http://www.enable-javascript.com/" rel="nofollow" target="_blank">Please enable Javascript for this Website!</a></strong></b>
+</noscript>

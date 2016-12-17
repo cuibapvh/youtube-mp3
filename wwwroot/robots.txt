@@ -1,0 +1,71 @@
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-Agent: TweetMeMeBot
+Disallow: /
+
+User-agent: Ezooms
+Disallow: /
+
+User-agent: rogerbot
+Disallow: /
+
+user-agent: AhrefsBot
+Disallow: / 
+
+User-agent: msnbot
+Crawl-delay: 4
+
+User-agent: Bingbot
+Crawl-delay: 4
+
+User-Agent: *
+Disallow: /get.php*
+Disallow: /download.php*
+Disallow: /app/download.php*
+Disallow: /imprint.php*
+Disallow: /privacy-policy.php*
+Disallow: /lyrics/results.php*
+Disallow: /redirect.php*
+Disallow: /convert_frame.php*
+Disallow: /convert.php*
+Disallow: /l/*
+Disallow: /survey/*
+Disallow: /search.php*
+
+User-Agent: *
+Allow: /mp3.php*
+Allow: /songtext.php*
+Allow: /index.php*
+Allow: /news.php*
+Allow: /rss.php*
+Allow: /lyrics/
+Allow: /lyrics/verzeichnis.php*
+Allow: /lyrics/songtexte.php*
+Allow: /en/
+Allow: /app/
+Allow: /m/*
+Allow: /sitemaps/*
+Allow: /
+
+User-Agent: Googlebot
+Allow: /search.php*
+Allow: /mp3.php*
+Allow: /songtext.php*
+Allow: /convert.php*
+Allow: /index.php*
+Allow: /news.php*
+Allow: /rss.php*
+Allow: /lyrics/
+Allow: /lyrics/verzeichnis.php*
+Allow: /lyrics/songtexte.php*
+Allow: /en/
+Allow: /app/
+Allow: /m/*
+Allow: /sitemaps/*
+Allow: /
+
+Sitemap: http://www.youtube-mp3.mobi/sitemap.xml

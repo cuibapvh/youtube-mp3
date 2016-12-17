@@ -1,0 +1,10 @@
+find . -maxdepth 1 -name '*-albums' -delete
+
+
+find . -type f -name "*-albums" -exec rm -f {} \;
+
+
+
+
+
+find . -maxdepth 11 -name '*-albums' |wc
